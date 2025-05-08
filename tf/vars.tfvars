@@ -2,6 +2,7 @@ project_id=""
 region=""
 use_storage = false
 storage_bucket_name=""
+storage_bucket_location = ""
 use_vertexai = false
 use_google_translate = false
 use_salesforce = false

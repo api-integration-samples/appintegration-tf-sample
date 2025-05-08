@@ -17,6 +17,11 @@ variable "storage_bucket_name" {
   default     = ""
   type        = string
 }
+variable "storage_bucket_location" {
+  description = "Storage bucket location - a region, or US, EU, or ASIA"
+  default     = "EU"
+  type        = string
+}
 variable "use_vertexai" {
   description = "Use Vertex AI connector."
   default     = false
@@ -49,32 +54,31 @@ variable "salesforce_security_token" {
 }
 
 // Enable Project APIs
-resource "google_project_service" "secretmanager" {
-  project = var.project_id
-  service = "secretmanager.googleapis.com"
-
-  timeouts {
-    create = "5m"
-    update = "5m"
-  }
-
-  disable_on_destroy = false
+module "enabled_google_apis" {
+  source = "terraform-google-modules/project-factory/google//modules/project_services"
+  project_id = var.project_id
+  activate_apis = [
+    "secretmanager.googleapis.com",
+    "integrations.googleapis.com",
+    "connectors.googleapis.com",
+    "aiplatform.googleapis.com",
+  ]
+  disable_services_on_destroy = false
 }
 
 // Storage Bucket
 resource "google_storage_bucket" "int-bucket" {
- count         = var.use_storage ? 1 : 0
- name          = var.storage_bucket_name
- project       = var.project_id
- location      = "EU"
- storage_class = "STANDARD"
-
- uniform_bucket_level_access = true
+  count = var.use_storage ? 1 : 0
+  name = var.storage_bucket_name
+  project = module.enabled_google_apis.project_id
+  location = var.storage_bucket_location
+  uniform_bucket_level_access = true
 }
 
 // Application Integration Service
 resource "google_integrations_client" "integration_region" {
-  project = var.project_id
+  project = module.enabled_google_apis.project_id
+  depends_on = [ module.enabled_google_apis ]
   location = var.region
 }
 
@@ -104,9 +108,9 @@ resource "google_project_iam_member" "int-service-secret-accessor" {
 // Secrets
 resource "google_secret_manager_secret" "salesforce_password" {
   count = var.use_salesforce ? 1 : 0
-  depends_on = [ google_project_service.secretmanager ]
+  project = module.enabled_google_apis.project_id
+  depends_on = [ module.enabled_google_apis ]
   secret_id = "salesforce_password"
-  project = var.project_id
   replication {
     auto {}
   }
@@ -118,9 +122,9 @@ resource "google_secret_manager_secret_version" "salesforce_password" {
 }
 resource "google_secret_manager_secret" "salesforce_security_token" {
   count = var.use_salesforce ? 1 : 0
-  depends_on = [ google_project_service.secretmanager ]
+  project = module.enabled_google_apis.project_id
+  depends_on = [ module.enabled_google_apis ]
   secret_id = "salesforce_security_token"
-  project = var.project_id
   replication {
     auto {}
   }
@@ -134,8 +138,9 @@ resource "google_secret_manager_secret_version" "salesforce_security_token" {
 // Vertex AI Connector
 resource "google_integration_connectors_connection" "vertex-connector" {
   name     = "vertex-connector"
+  depends_on = [module.enabled_google_apis]
   count    = var.use_vertexai ? 1 : 0
-  project = var.project_id
+  project = module.enabled_google_apis.project_id
   location = var.region
   connector_version = "projects/${var.project_id}/locations/global/providers/gcp/connectors/vertexai/versions/1"
   description = "Connector for Vertex AI."
@@ -165,13 +170,19 @@ resource "google_integration_connectors_connection" "vertex-connector" {
   log_config {
     enabled = true
   }
+
+  timeouts {
+    create = "60m"
+    update = "60m"
+  }  
 }
 
 // Google Translate Connector
 resource "google_integration_connectors_connection" "google-translate-connector" {
   name     = "google-translate-connector"
+  depends_on = [module.enabled_google_apis, google_integration_connectors_connection.vertex-connector]
   count    = var.use_google_translate ? 1 : 0
-  project = var.project_id
+  project = module.enabled_google_apis.project_id
   location = var.region
   connector_version = "projects/${var.project_id}/locations/global/providers/gcp/connectors/cloudtranslation/versions/1"
   description = "Connector for Google Translate."
@@ -194,20 +205,26 @@ resource "google_integration_connectors_connection" "google-translate-connector"
   log_config {
     enabled = true
   }
+
+  timeouts {
+    create = "60m"
+    update = "60m"
+  }
 }
 
 // Google Cloud Storage Connector
 resource "google_integration_connectors_connection" "cloud-storage-connector" {
-  name                = "cloud-storage-connector"
-  count               = var.use_storage ? 1 : 0
-  project             = var.project_id
-  location            = var.region
-  connector_version   = "projects/${var.project_id}/locations/global/providers/gcp/connectors/gcs/versions/1"
+  name = "cloud-storage-connector"
+  depends_on = [module.enabled_google_apis, google_integration_connectors_connection.google-translate-connector]
+  count = var.use_storage ? 1 : 0
+  project = module.enabled_google_apis.project_id
+  location = var.region
+  connector_version = "projects/${var.project_id}/locations/global/providers/gcp/connectors/gcs/versions/1"
   description = "Connector for Cloud Storage."
   
   config_variable {
-    key               = "project_id"
-    string_value      =  var.project_id
+    key = "project_id"
+    string_value =  var.project_id
   }
 
   node_config {
@@ -227,20 +244,26 @@ resource "google_integration_connectors_connection" "cloud-storage-connector" {
   log_config {
     enabled = true
   }
+
+  timeouts {
+    create = "60m"
+    update = "60m"
+  }
 }
 
 // Salesforce Connector
 resource "google_integration_connectors_connection" "salesforce-connector" {
-  name                = "salesforce-connector"
-  count               = var.use_salesforce ? 1 : 0
-  project             = var.project_id
-  location            = var.region
-  connector_version   = "projects/${var.project_id}/locations/global/providers/salesforce/connectors/salesforce/versions/1"
+  name = "salesforce-connector"
+  depends_on = [module.enabled_google_apis, google_integration_connectors_connection.cloud-storage-connector]
+  count = var.use_salesforce ? 1 : 0
+  project = module.enabled_google_apis.project_id
+  location = var.region
+  connector_version = "projects/${var.project_id}/locations/global/providers/salesforce/connectors/salesforce/versions/1"
   description = "Connector for Salesforce."
   
   config_variable {
-    key               = "project_id"
-    string_value      =  var.project_id
+    key = "project_id"
+    string_value =  var.project_id
   }
 
   node_config {
@@ -262,5 +285,10 @@ resource "google_integration_connectors_connection" "salesforce-connector" {
 
   log_config {
     enabled = true
+  }
+
+  timeouts {
+    create = "60m"
+    update = "60m"
   }
 }
