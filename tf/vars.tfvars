@@ -1,6 +1,10 @@
 project_id=""
 region=""
-bucket_name=""
 use_storage = false
+storage_bucket_name=""
 use_vertexai = false
 use_google_translate = false
+use_salesforce = false
+salesforce_username = ""
+salesforce_password = ""
+salesforce_security_token = ""
