@@ -12,6 +12,11 @@ variable "bucket_name" {
   default     = ""
   type        = string
 }
+variable "use_storage" {
+  description = "Use Google Cloud Storage connector and create bucket."
+  default     = false
+  type        = bool
+}
 variable "use_vertexai" {
   description = "Use Vertex AI connector."
   default     = false
@@ -25,7 +30,7 @@ variable "use_google_translate" {
 
 // Storage Bucket
 resource "google_storage_bucket" "int-bucket" {
- count         = var.bucket_name == "" ? 0 : 1
+ count         = var.use_storage ? 1 : 0
  name          = var.bucket_name
  project       = var.project_id
  location      = "EU"
@@ -126,7 +131,7 @@ resource "google_integration_connectors_connection" "google-translate-connector"
 // Google Cloud Storage Connector
 resource "google_integration_connectors_connection" "cloud-storage-connector" {
   name                = "cloud-storage-connector"
-  count               = var.bucket_name == "" ? 0 : 1
+  count               = var.use_storage ? 1 : 0
   project             = var.project_id
   location            = var.region
   connector_version   = "projects/${var.project_id}/locations/global/providers/gcp/connectors/gcs/versions/1"
