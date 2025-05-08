@@ -58,6 +58,7 @@ module "enabled_google_apis" {
   source = "terraform-google-modules/project-factory/google//modules/project_services"
   project_id = var.project_id
   activate_apis = [
+    "cloudresourcemanager.googleapis.com",
     "secretmanager.googleapis.com",
     "integrations.googleapis.com",
     "connectors.googleapis.com",
