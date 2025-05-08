@@ -16,7 +16,7 @@ This is intended to be an example of how a Terraform deployment for `Application
 cd tf
 # copy var file and set your vars
 cp vars.tfvars vars.local.tfvars
-# edit and set your project, region and a unique storage bucket name (like int-bucket-5643j)
+# edit and set your project, region and a unique storage bucket name (like int-bucket-5643j). If you don't want to use cloud storage, then just remove the bucket_name or set to "".
 nano vars.local.tfvars
 
 # take a look at main.tf and the resources configured there.

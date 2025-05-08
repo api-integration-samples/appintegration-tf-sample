@@ -9,11 +9,13 @@ variable "region" {
 }
 variable "bucket_name" {
   description = "Storage bucket name."
+  default     = ""
   type        = string
 }
 
 // Storage Bucket
 resource "google_storage_bucket" "int-bucket" {
+ count         = var.bucket_name == "" ? 0 : 1
  name          = var.bucket_name
  project       = var.project_id
  location      = "EU"
@@ -111,15 +113,16 @@ resource "google_integration_connectors_connection" "google-translate-connector"
 
 // Google Cloud Storage Connector
 resource "google_integration_connectors_connection" "cloud-storage-connector" {
-  name     = "cloud-storage-connector"
-  project = var.project_id
-  location = var.region
-  connector_version = "projects/${var.project_id}/locations/global/providers/gcp/connectors/gcs/versions/1"
+  name                = "cloud-storage-connector"
+  count               = var.bucket_name == "" ? 0 : 1
+  project             = var.project_id
+  location            = var.region
+  connector_version   = "projects/${var.project_id}/locations/global/providers/gcp/connectors/gcs/versions/1"
   description = "Connector for Cloud Storage"
   
   config_variable {
-    key           = "project_id"
-    string_value =  var.project_id
+    key               = "project_id"
+    string_value      =  var.project_id
   }
 
   node_config {
