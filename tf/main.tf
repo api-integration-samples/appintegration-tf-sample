@@ -12,6 +12,16 @@ variable "bucket_name" {
   default     = ""
   type        = string
 }
+variable "use_vertexai" {
+  description = "Use Vertex AI connector."
+  default     = false
+  type        = bool
+}
+variable "use_google_translate" {
+  description = "Use Google Translate connector."
+  default     = false
+  type        = bool
+}
 
 // Storage Bucket
 resource "google_storage_bucket" "int-bucket" {
@@ -51,6 +61,7 @@ resource "google_project_iam_member" "int-service-secret-accessor" {
 // Vertex AI Connector
 resource "google_integration_connectors_connection" "vertex-connector" {
   name     = "vertex-connector"
+  count    = var.use_vertexai ? 1 : 0
   project = var.project_id
   location = var.region
   connector_version = "projects/${var.project_id}/locations/global/providers/gcp/connectors/vertexai/versions/1"
@@ -86,6 +97,7 @@ resource "google_integration_connectors_connection" "vertex-connector" {
 // Google Translate Connector
 resource "google_integration_connectors_connection" "google-translate-connector" {
   name     = "google-translate-connector"
+  count    = var.use_google_translate ? 1 : 0
   project = var.project_id
   location = var.region
   connector_version = "projects/${var.project_id}/locations/global/providers/gcp/connectors/cloudtranslation/versions/1"
