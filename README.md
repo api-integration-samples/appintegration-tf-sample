@@ -1,6 +1,6 @@
 ## Application Integration TF Sample
 
-This is a sample Terraform deployment that enables the Google Cloud service Application Integration, as well as provisions optional connectors that you can configure.
+This is a sample Terraform deployment for Google Cloud Application Integration and Connectors, aiming to make it simple to apply a flexible base configuration to a new GCP project with several optional connectors that can be enabled.
 
 Supported connectors:
 - Vertex AI - turn on with the `use_vertexai=true` variable
@@ -17,9 +17,6 @@ cd tf
 cp vars.tfvars vars.local.tfvars
 # edit and set your project, region and a optional connectors.
 nano vars.local.tfvars
-
-# take a look at main.tf and the resources configured there.
-nano main.tf
 
 # initialize and apply the configuration. 
 terraform init
